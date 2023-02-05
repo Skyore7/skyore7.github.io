@@ -1,26 +1,38 @@
 html {
   background-color: rgb(20, 20, 20);
+  color: white;
 }
 
 #board {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
-    grid-gap: 1px;
     width: 400px;
   }
   
-  #board div {
-    background: rgb(8, 30, 224);
+  #boardfield {
     height: 50px;
     width: 50px;
+    background: rgb(5, 155, 201);
   }
 
-  #board div:hover:after {
-    content: "\265B";
-}
   
-  #board div:nth-child(16n+2), #board div:nth-child(16n+4),
-  #board div:nth-child(16n+6), #board div:nth-child(16n+8), #board div:nth-child(16n+9),
-  #board div:nth-child(16n+11), #board div:nth-child(16n+13), #board div:nth-child(16n+15){
-    background: rgb(0, 195, 255);
+  #boardfield:nth-child(16n+2), #boardfield:nth-child(16n+4),
+  #boardfield:nth-child(16n+6), #boardfield:nth-child(16n+8), #boardfield:nth-child(16n+9),
+  #boardfield:nth-child(16n+11), #boardfield:nth-child(16n+13), #boardfield:nth-child(16n+15) {
+    background: rgb(1, 50, 211);
   }
+
+  #boardfield div {
+    height: 40px;
+    width: 40px;
+    margin: 5px;
+    margin-top: -3px;
+    text-shadow: -1px 0 black, 0 1px black, 1px 0 black, 0 -1px black;
+    background: rgba(255, 255, 255, 0.281);
+
+    font-size: 40px;
+
+  }
+
+  
+
