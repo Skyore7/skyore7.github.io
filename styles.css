@@ -1,23 +1,18 @@
-.board {
+#board {
     display: grid;
-    border: 2px solid black;
-    }
-
-
-.piece-square {
-    width: 50px;
+    grid-template-columns: repeat(8, 1fr);
+    grid-gap: 1px;
+    width: 400px
+  }
+  
+  #board div {
+    background: rgb(8, 30, 224);
     height: 50px;
-    box-sizing: border-box;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    float: left;
-}
-
-.light-square {
-    background: grey;
-}
-.dark-square {
-    background: black;
-}
+    width: 50px;
+  }
+  
+  #board div:nth-child(16n+2), #board div:nth-child(16n+4),
+  #board div:nth-child(16n+6), #board div:nth-child(16n+8), #board div:nth-child(16n+9),
+  #board div:nth-child(16n+11), #board div:nth-child(16n+13), #board div:nth-child(16n+15){
+    background: rgb(0, 195, 255);
+  }
