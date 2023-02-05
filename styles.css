@@ -2,7 +2,7 @@
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-gap: 1px;
-    width: 400px
+    width: 400px;
   }
   
   #board div {
@@ -10,6 +10,10 @@
     height: 50px;
     width: 50px;
   }
+
+  #board div:hover:after {
+    content: "\265B";
+}
   
   #board div:nth-child(16n+2), #board div:nth-child(16n+4),
   #board div:nth-child(16n+6), #board div:nth-child(16n+8), #board div:nth-child(16n+9),
