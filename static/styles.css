@@ -1,0 +1,63 @@
+:root {
+  --width: 1024.0px;
+  --height: 819.2px;
+  --borders: 115.2px;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #3d3f42;
+}
+
+.board {
+  position: relative;
+  width: var(--width);
+  height: var(--height);
+  background-color: black;
+  clip-path: polygon(
+    var(--borders) 0px, calc(var(--width) - var(--borders)) 0px,
+    var(--width) var(--borders), var(--width) calc(var(--height) - var(--borders)),
+    calc(var(--width) - var(--borders)) var(--height), var(--borders) var(--height),
+    0px calc(var(--height) - var(--borders)), 0px var(--borders)
+  );
+  overflow: hidden; /* Ensure content is clipped inside the polygon */
+}
+
+
+
+.draggable {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #f00;
+  color: #fff;
+  font-size: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+}
+
+.ball {
+  background-color: #ff9800;
+  width: 36.5px;
+  height: 36.5px;
+}
+
+.player-blue {
+  background-color: #2196f3;
+}
+
+.player-orange {
+  background-color: #f44336;
+}
+
+
+  
+
