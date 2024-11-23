@@ -2,6 +2,7 @@ const draggables = document.querySelectorAll('.draggable');
 const widthBoard = 1024.0;
 const heightBoard = 819.2;
 const bordersBoard = 115.2;
+const goalDepth = 88.0;
 
 draggables.forEach(item => {
     item.addEventListener('mousedown', onMouseDown);

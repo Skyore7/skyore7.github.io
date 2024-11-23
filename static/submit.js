@@ -20,20 +20,29 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())  // Expecting JSON response (x and y coordinates)
             .then(data => {
-                // Extract x and y coordinates from the response
-                const x = data.x;
-                const y = data.y;
 
-                // Display the coordinates for debugging (optional)
-                responseDiv.innerHTML = `<p>Coordinates: x = ${x}, y = ${y}</p>`;
+                var player = 0;
 
-                // Get the player element and set its position
-                const playerElement = document.getElementById('player0');
-                if (playerElement) {
-                    playerElement.style.position = 'absolute';  // Make sure it's positioned absolutely
-                    playerElement.style.left = `${x}px`;       // Set the x coordinate
-                    playerElement.style.top = `${y}px`;        // Set the y coordinate
+                while (player < 6) {
+                    // Get the player element and set its position
+                    const playerElement = document.getElementById(`player${player}`);
+                    if (playerElement) {
+                        playerElement.style.position = 'absolute';  // Make sure it's positioned absolutely
+                        playerElement.style.left = `${data[player][0]}px`;       // Set the x coordinate
+                        playerElement.style.top = `${data[player][1]}px`;        // Set the y coordinate
+                    }                   
+                    
+                    player += 1
+
                 }
+                const ballElement = document.getElementById(`ball`);
+                ballElement.style.position = 'absolute';  // Make sure it's positioned absolutely
+                ballElement.style.left = `${data[player][0]}px`;       // Set the x coordinate
+                ballElement.style.top = `${data[player][1]}px`;        // Set the y coordinate
+
+
+
+                
             })
             .catch(error => {
                 responseDiv.innerHTML = `<p style="color: red;">Error: ${error}</p>`;

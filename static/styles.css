@@ -2,6 +2,8 @@
   --width: 1024.0px;
   --height: 819.2px;
   --borders: 115.2px;
+  --goalDepth: 88.0px;
+  --goalHeight: 178.6px;
 }
 
 body {
@@ -11,19 +13,64 @@ body {
   height: 100vh;
   margin: 0;
   font-family: Arial, sans-serif;
-  background-color: #3d3f42;
+  background-color: #8b8f96;
+}
+
+.score-blue {
+  position: absolute;
+  color: white;
+  top: calc(var(--height) / 2);
+  left: 2px;
+  font-size: 20px;
+}
+
+.score-orange {
+  position: absolute;
+  color: white;
+  top: calc(var(--height) / 2);
+  left: calc(var(--goalDepth) + var(--width) + 2px);
+  font-size: 20px;
+}
+
+.goal {
+  position: absolute;
+  width: var(--goalDepth);
+  height: var(--goalHeight);
+  top: calc(var(--height) / 2 - var(--goalHeight) / 2);
+}
+
+.goal-orange {
+  background-color: #85231c;
+  left: calc(var(--goalDepth) + var(--width))
+}
+
+.goal-blue {
+  background-color: #124d7e;
+  left: 0px;
 }
 
 .board {
   position: relative;
-  width: var(--width);
+  z-index: 1;
+  width: calc(var(--width) + var(--goalDepth) * 2);
   height: var(--height);
   background-color: black;
   clip-path: polygon(
-    var(--borders) 0px, calc(var(--width) - var(--borders)) 0px,
-    var(--width) var(--borders), var(--width) calc(var(--height) - var(--borders)),
-    calc(var(--width) - var(--borders)) var(--height), var(--borders) var(--height),
-    0px calc(var(--height) - var(--borders)), 0px var(--borders)
+    calc(var(--borders) + var(--goalDepth)) 0px, calc(var(--width) - var(--borders) + var(--goalDepth)) 0px,
+    calc(var(--width) + var(--goalDepth)) var(--borders), 
+    /*goal right*/
+    calc(var(--width) + var(--goalDepth)) calc(var(--height) / 2 - var(--goalHeight) / 2), calc(var(--width) + var(--goalDepth) * 2) calc(var(--height) / 2 - var(--goalHeight) / 2),
+    calc(var(--width) + var(--goalDepth) * 2) calc(var(--height) / 2 + var(--goalHeight) / 2), calc(var(--width) + var(--goalDepth)) calc(var(--height) / 2 + var(--goalHeight) / 2),
+    
+    calc(var(--width) + var(--goalDepth)) calc(var(--height) - var(--borders)),
+    calc(var(--width) - var(--borders) + var(--goalDepth)) var(--height), calc(var(--borders) + var(--goalDepth)) var(--height),
+    var(--goalDepth) calc(var(--height) - var(--borders)), 
+    
+    /*goal left*/
+    var(--goalDepth) calc(var(--height) / 2 + var(--goalHeight) / 2), 0px calc(var(--height) / 2 + var(--goalHeight) / 2),
+    0px calc(var(--height) / 2 - var(--goalHeight) / 2), var(--goalDepth) calc(var(--height) / 2 - var(--goalHeight) / 2),
+    
+    var(--goalDepth) var(--borders)
   );
   overflow: hidden; /* Ensure content is clipped inside the polygon */
 }
@@ -32,6 +79,7 @@ body {
 
 .draggable {
   position: absolute;
+  z-index: 10;
   width: 30px;
   height: 30px;
   border-radius: 50%;
