@@ -1,0 +1,228 @@
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+# python -m tensorboard.main --logdir=runs 
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+from sklearn.model_selection import train_test_split
+from sklearn.multioutput import MultiOutputRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from tqdm import tqdm
+from models import RocketLeagueModel
+
+import h5py
+import torch
+
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from torch import nn, optim
+
+from data_preprocessing import preprocessTrain, preprocessTest
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+
+path = "data/"
+
+dtypes_traindf = pd.read_csv(path + "train_dtypes.csv")
+dtypes_train = {k: (v if v != 'float16' else 'float32') for (k, v) in zip(dtypes_traindf.column, dtypes_traindf.dtype)}
+dtypes_testdf = pd.read_csv(path + "test_dtypes.csv")
+dtypes_test = {k: (v if v != 'float16' else 'float32') for (k, v) in zip(dtypes_testdf.column, dtypes_testdf.dtype)}
+
+""" filenames_train = []
+for i in range(10):
+    filenames_train.append(preprocessTrain(path + "train_%i" % i)) """
+#filename_test = preprocessTest(path + "test")
+
+filenames_train = []
+for i in range(10):
+    filenames_train.append(path + "train_%i.h5" % i)
+
+filename_test = path + "test.h5"
+
+print(filenames_train)
+print(filename_test)
+
+train_tensors = []
+
+for filename in filenames_train:
+    with h5py.File(filename, "r") as f:
+        # Access the 'data' dataset (the one where the preprocessed data is stored)
+        train_data = f["data"][:]  # Use [:] to load the entire dataset into memory
+        
+        
+        # Convert the data (which is a NumPy array) into a PyTorch tensor
+        train_tensor = torch.tensor(train_data, dtype=torch.float32)
+        print(train_tensor.shape)
+
+        train_tensors.append(train_tensor)
+
+train_tensor_all = torch.cat(train_tensors)
+print(train_tensor_all.shape)
+
+with h5py.File(filename_test, "r") as f:
+    # Access the 'data' dataset (the one where the preprocessed data is stored)
+    test_data = f["data"][:]  # Use [:] to load the entire dataset into memory
+    
+    
+    # Convert the data (which is a NumPy array) into a PyTorch tensor
+    test_tensor = torch.tensor(test_data, dtype=torch.float32)
+
+# Now `data_tensor` is ready to be used in your model or for further processing
+print(test_tensor.shape)
+print(test_tensor)
+
+class MyDataset(Dataset):
+    def __init__(self, data_tensor, train=True):
+        """
+        Args:
+            data_tensor (torch.Tensor): The tensor containing the dataset.
+        """
+        self.data_tensor = data_tensor
+        self.train = train
+
+    def __len__(self):
+        return len(self.data_tensor)
+
+    def __getitem__(self, idx):
+        if self.train:
+            features = self.data_tensor[idx, :-3]  # All but last 3 columns
+            labels = self.data_tensor[idx, -3:]    # Last 3 columns
+            return features, labels
+        else:
+            features = self.data_tensor[idx, :]   # All but first column (if needed)
+            return features, torch.tensor([])
+
+        
+
+from sklearn.model_selection import train_test_split
+
+def train(train_tensor, model_path='model.pth'):
+    model = RocketLeagueModel().to(device)
+    criterion = nn.BCELoss()  # Example, adjust based on your task
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # Set up TensorBoard writer
+    writer = SummaryWriter(log_dir='runs/my_experiment')
+
+    # Split the train_tensor into training and validation sets (80% train, 20% validation)
+    train_data, val_data = train_test_split(train_tensor, test_size=0.2, random_state=42)
+
+    # Prepare your train and validation datasets and loaders
+    train_dataset = MyDataset(train_data, True)
+    val_dataset = MyDataset(val_data, True)  # Using True here as this will have labels
+    #test_dataset = MyDataset(test_tensor, False)  # No labels for test
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
+    #test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+    # Training loop with validation
+    epochs = 10  # Example epoch count
+    for epoch in range(epochs):
+        model.train()  # Set the model to training mode
+        running_loss = 0.0
+
+        for inputs, labels in train_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+            # Forward pass
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
+
+            # Track the loss
+            running_loss += loss.item()
+
+        # Log training loss to TensorBoard
+        avg_train_loss = running_loss / len(train_loader)
+        writer.add_scalar('Loss/train', avg_train_loss, epoch)
+
+        # Validation step
+        model.eval()  # Set the model to evaluation mode
+        val_loss = 0.0
+        correct = 0
+        total = 0
+
+        with torch.no_grad():  # No need to track gradients during validation
+            for inputs, labels in val_loader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                val_loss += loss.item()
+
+        avg_val_loss = val_loss / len(val_loader)
+
+        # Log validation loss and accuracy to TensorBoard
+        writer.add_scalar('Loss/validation', avg_val_loss, epoch)
+
+        print(f"Epoch {epoch+1}/{epochs}, "
+            f"Train Loss: {avg_train_loss:.4f}, "
+            f"Validation Loss: {avg_val_loss:.4f}, ")
+
+    # Save the model's state
+    torch.save(model.state_dict(), model_path)
+
+    # Close the writer when done
+    writer.close()
+
+def create_submission(test_tensor, model_path='model.pth', device='cuda'):
+    # Load the model
+    model = RocketLeagueModel().to(device)
+    model.load_state_dict(torch.load(model_path))
+    model.eval()  # Set the model to evaluation mode
+
+    test_ids = test_tensor[:,:1].squeeze().to(torch.int)
+    test_data = test_tensor[:,1:]
+
+    # Prepare the test dataset and loader
+    test_dataset = MyDataset(test_data, False)  # False means no labels for test data
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+
+    # Initialize lists to store the predictions
+    team_A_predictions = []
+    team_B_predictions = []
+
+    # Make predictions on the test data
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            
+            # Discard the third output (assuming the model outputs 3 values per instance)
+            team_A_scoring = outputs[:, 0].cpu().numpy()  # First output: team_A_scoring_within_10sec
+            team_B_scoring = outputs[:, 1].cpu().numpy()  # Second output: team_B_scoring_within_10sec
+
+            team_A_predictions.extend(team_A_scoring)
+            team_B_predictions.extend(team_B_scoring)
+
+    # Convert predictions to numpy arrays
+    team_A_predictions = np.array(team_A_predictions)
+    team_B_predictions = np.array(team_B_predictions)
+
+    # Create a DataFrame with IDs and predictions
+    submission_df = pd.DataFrame({
+        'id': test_ids.numpy(),  # Renamed ID column
+        'team_A_scoring_within_10sec': team_A_predictions.flatten(),
+        'team_B_scoring_within_10sec': team_B_predictions.flatten()
+    })
+
+    # Save to CSV
+    submission_df.to_csv('submission.csv', index=False)
+    print("Submission file saved as 'submission.csv'.")
+
+
+# Train with the updated train function
+#train(train_tensor_all)
+create_submission(test_tensor)
+
