@@ -172,6 +172,171 @@ class RocketLeagueModel3(nn.Module):
         outputs = torch.mean(torch.stack([out1, out2]), dim=0)
         return outputs
 
+class RocketLeagueModel4(nn.Module):
+    def __init__(self):
+        super(RocketLeagueModel4, self).__init__()
+
+        # Ball preprocessing
+        self.ball_dense = BatchedDenses(6, [24, 18, 10])
+
+        # Player convolution with batch normalization
+        self.player_conv = nn.Sequential(
+            nn.Conv2d(8, 40, kernel_size=3, stride=1, padding=1),  # Conv layer
+            nn.ReLU(),
+            nn.Conv2d(40, 32, kernel_size=3, stride=1, padding=1),  # Conv layer
+            nn.ReLU(),
+            nn.Conv2d(32, 24, kernel_size=3, stride=1, padding=1),  # Conv layer
+            nn.ReLU(),
+            nn.Conv2d(24, 18, kernel_size=3, stride=1, padding=1),  # Conv layer
+            nn.BatchNorm2d(18),  # Batch normalization
+            nn.ReLU()
+        )
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(10 + 18 * 2, 81),
+            nn.ReLU(),
+            nn.Linear(81, 64),
+            nn.ReLU(),
+            nn.Linear(64, 48),
+            nn.ReLU(),
+            nn.Linear(48, 3)
+        )
+
+    def forward(self, inputs):
+        # Split inputs into ball and players
+        ball = inputs[:, :6]
+        playersA = inputs[:, 6:30].reshape(-1, 3, 8)  # [batch_size, num_players, features]
+        playersB = inputs[:, 30:54].reshape(-1, 3, 8)  # [batch_size, num_players, features]
+
+        # Process ball
+        ball_processed = self.ball_dense(ball)  # [batch_size, ball_features]
+
+        # Process players (shared `player_conv` for each player)
+        # Permute to match [batch_size, channels, height, width] = [batch_size, features, num_players, 1]
+        playersA_perm = playersA.permute(0, 2, 1).unsqueeze(-1)  # [batch_size, features, num_players, 1]
+        playersB_perm = playersB.permute(0, 2, 1).unsqueeze(-1)  # [batch_size, features, num_players, 1]
+
+        # Apply convolution to players with batch normalization
+        playersA_conv = self.player_conv(playersA_perm)  # [batch_size, out_channels, num_players, 1]
+        playersB_conv = self.player_conv(playersB_perm)  # [batch_size, out_channels, num_players, 1]
+
+        # Aggregate player features (mean pooling across players)
+        teamA_agg = playersA_conv.mean(dim=2).squeeze(-1)  # [batch_size, out_channels]
+        teamB_agg = playersB_conv.mean(dim=2).squeeze(-1)  # [batch_size, out_channels]
+
+        # Concatenate ball features with aggregated team features
+        combined = torch.cat([ball_processed, teamA_agg, teamB_agg], dim=1)  # [batch_size, combined_features]
+
+        # Pass through fully connected layers
+        x = self.fc(combined)  # [batch_size, 3]
+
+        # Compute outputs for each target
+        outputs = F.softmax(x, dim=1)
+        return outputs
+
+
+class RocketLeagueModel6(nn.Module):
+    def __init__(self):
+        super(RocketLeagueModel6, self).__init__()
+        # Ball preprocessing
+        self.ball_dense = BatchedDenses(6, [24, 10])
+
+        # Player convolution
+        self.player_conv = BatchedConv2Ds(8, [40, 24, 18])
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(10 + 18 * 2, 81),
+            nn.ReLU(),
+            nn.Linear(81, 64),
+            nn.ReLU(),
+            nn.Linear(64, 48),
+            nn.ReLU(),
+            nn.Linear(48, 3)
+        )
+
+    def forward(self, inputs):
+        # Split inputs into ball and players
+        ball = inputs[:, :6]
+        playersA = inputs[:, 6:30].reshape(-1, 3, 8)  # [batch_size, num_players, features]
+        playersB = inputs[:, 30:54].reshape(-1, 3, 8)  # [batch_size, num_players, features]
+
+        # Process ball
+        ball_processed = self.ball_dense(ball)  # [batch_size, ball_features]
+
+        # Process players (shared `player_conv` for each player)
+        # Permute to match [batch_size, channels, height, width] = [batch_size, features, num_players, 1]
+        playersA_perm = playersA.permute(0, 2, 1).unsqueeze(-1)  # [batch_size, features, num_players, 1]
+        playersB_perm = playersB.permute(0, 2, 1).unsqueeze(-1)  # [batch_size, features, num_players, 1]
+
+        # Apply convolution to players
+        playersA_conv = self.player_conv(playersA_perm)  # [batch_size, out_channels, num_players, 1]
+        playersB_conv = self.player_conv(playersB_perm)  # [batch_size, out_channels, num_players, 1]
+
+        # Aggregate player features (mean pooling across players)
+        teamA_agg = playersA_conv.mean(dim=2).squeeze(-1)  # [batch_size, out_channels]
+        teamB_agg = playersB_conv.mean(dim=2).squeeze(-1)  # [batch_size, out_channels]
+
+        # Concatenate ball features with aggregated team features
+        combined = torch.cat([ball_processed, teamA_agg, teamB_agg], dim=1)  # [batch_size, combined_features]
+
+        # Pass through fully connected layers
+        x = self.fc(combined)  # [batch_size, 3]
+
+        return x
+
+class RocketLeagueModel7(nn.Module):
+    def __init__(self):
+        super(RocketLeagueModel7, self).__init__()
+        # Ball preprocessing
+        self.ball_dense = BatchedDenses(6, [24, 10])
+
+        # Player convolution
+        self.player_conv = BatchedConv2Ds(8, [40, 24, 18])
+
+        # Fully connected layers
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(10 + 18 * 2, 32),
+            nn.ReLU(),
+            nn.Linear(32, 12),
+            nn.ReLU(),
+            nn.Linear(12, 3)
+        )
+
+    def forward(self, inputs):
+        # Split inputs into ball and players
+        ball = inputs[:, :6]
+        playersA = inputs[:, 6:30].reshape(-1, 3, 8)  # [batch_size, num_players, features]
+        playersB = inputs[:, 30:54].reshape(-1, 3, 8)  # [batch_size, num_players, features]
+
+        # Process ball
+        ball_processed = self.ball_dense(ball)  # [batch_size, ball_features]
+
+        # Process players (shared `player_conv` for each player)
+        # Permute to match [batch_size, channels, height, width] = [batch_size, features, num_players, 1]
+        playersA_perm = playersA.permute(0, 2, 1).unsqueeze(-1)  # [batch_size, features, num_players, 1]
+        playersB_perm = playersB.permute(0, 2, 1).unsqueeze(-1)  # [batch_size, features, num_players, 1]
+
+        # Apply convolution to players
+        playersA_conv = self.player_conv(playersA_perm)  # [batch_size, out_channels, num_players, 1]
+        playersB_conv = self.player_conv(playersB_perm)  # [batch_size, out_channels, num_players, 1]
+
+        # Aggregate player features (mean pooling across players)
+        teamA_agg = playersA_conv.mean(dim=2).squeeze(-1)  # [batch_size, out_channels]
+        teamB_agg = playersB_conv.mean(dim=2).squeeze(-1)  # [batch_size, out_channels]
+
+        # Concatenate ball features with aggregated team features
+        combined = torch.cat([ball_processed, teamA_agg, teamB_agg], dim=1)  # [batch_size, combined_features]
+
+        # Pass through fully connected layers
+        x = self.fc(combined)  # [batch_size, 3]
+
+        return x
+
 # Example usage
 """ model = RocketLeagueModel()
 inputs = torch.randn(32, 54)  # Batch size of 32, input features 54
